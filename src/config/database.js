@@ -1,46 +1,49 @@
-import Database from 'better-sqlite3'
-import path from 'path'
-import { fileURLToPath } from 'url'
-import config from './config.js'  // Import config
+import Database from "better-sqlite3";
+import path from "path";
+import { fileURLToPath } from "url";
+import config from "./config.js";
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// Use DATABASE_URL from config
-let dbPath
+// Determine database path
+let dbPath;
 
 if (path.isAbsolute(config.databaseUrl)) {
-	// Absolute path (production with volume mount)
-	dbPath = config.databaseUrl
+	// Production: absolute path (Render / Railway volume mount)
+	dbPath = config.databaseUrl;
 } else {
-	// Relative path (development)
-	dbPath = path.join(__dirname, '../../', config.databaseUrl)
+	// Development: relative path
+	dbPath = path.join(__dirname, "../../", config.databaseUrl);
 }
 
-console.log(`📊 Database path: ${dbPath}`)
+console.log(`📊 Database path: ${dbPath}`);
 
-// Create/connect to database
-const db = new Database(dbPath)
+// Open SQLite database
+const db = new Database(dbPath);
 
-// Enable foreign keys
-db.pragma('foreign_keys = ON')
+// Enable foreign key constraints
+db.pragma("foreign_keys = ON");
 
-// Initialize database tables
+// Initialize all tables
 export const initializeDatabase = async () => {
-	console.log('🔧 Initializing database...')
-	
-	// Import models
-	const User = (await import('../models/User.js')).default
-	
-	// Create tables
-	User.createTable()
-	
-	// Only seed in development
-	if (config.isDevelopment()) {
-		User.seed()
-	}
-	
-	console.log('✅ Database initialization complete')
-}
+	console.log("🔧 Initializing database...");
 
-export default db
+	const User = (await import("../models/User.js")).default;
+	const { Restaurant } = await import("../models/Restaurant.js");
+
+	// Create tables
+	User.createTable();
+	Restaurant.createTable();
+
+	// Seed in development
+	if (config.isDevelopment()) {
+		User.seed();
+		if (Restaurant.seed) Restaurant.seed(); // Optional seed function
+	}
+
+	console.log("✅ Database initialization complete");
+};
+
+export default db;
+export { db };
